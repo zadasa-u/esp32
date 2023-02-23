@@ -1,9 +1,6 @@
-from machine import Pin
-import time
+import dht, machine
 
-led = Pin(2, Pin.OUT)
-while (True):
-    led.on()
-    time.sleep(.5)
-    led.off()
-    time.sleep(.5)
+d = dht.DHT22(machine.Pin(13))
+d.measure()
+d.temperature()
+d.humidity()
