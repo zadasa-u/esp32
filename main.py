@@ -16,12 +16,13 @@
 from mqtt_as import MQTTClient
 from mqtt_local import config
 import uasyncio as asyncio
+import dht, machine
 
-SERVER = config['server']
+d = dht.DHT22(machine.Pin(13))
 
 def sub_cb(topic, msg, retained):
-    c, r = [int(x) for x in msg.decode().split(' ')]
-    print('Topic = {} Count = {} Retransmissions = {} Retained = {}'.format(topic.decode(), c, r, retained))
+    # c, r = [int(x) for x in msg.decode().split(' ')]
+    print('Topic = {} Valor = {}'.format(topic.decode(), msg.decode()))
 
 async def wifi_han(state):
     print('Wifi is ', 'up' if state else 'down')
@@ -29,25 +30,35 @@ async def wifi_han(state):
 
 # If you connect with clean_session True, must re-subscribe (MQTT spec 3.1.2.4)
 async def conn_han(client):
-    await client.subscribe('result', 1)
+    await client.subscribe('temperatura', 1)
+    await client.subscribe('humedad', 1)
 
 async def main(client):
     await client.connect()
     n = 0
     await asyncio.sleep(2)  # Give broker time
     while True:
-        print('publish', n)
-        # If WiFi is down the following will pause for the duration.
-        await client.publish('result', '{} {}'.format(n, client.REPUB_COUNT), qos = 1)
-        n += 1
+        try:
+            d.measure()
+            try:
+                temperatura=d.temperature()
+                await client.publish('temperatura', '{}'.format(temperatura), qos = 1)
+            except OSError as e:
+                print("sin sensor temperatura")
+            try:
+                humedad=d.humidity()
+                await client.publish('humedad', '{}'.format(humedad), qos = 1)
+            except OSError as e:
+                print("sin sensor humedad")
+        except OSError as e:
+            print("sin sensor")
         await asyncio.sleep(20)  # Broker is slow
 
 # Define configuration
 config['subs_cb'] = sub_cb
-config['server'] = SERVER
 config['connect_coro'] = conn_han
 config['wifi_coro'] = wifi_han
-config['ssl'] = False
+config['ssl'] = True
 
 # Set up client
 MQTTClient.DEBUG = True  # Optional
