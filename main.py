@@ -21,8 +21,7 @@ import dht, machine
 d = dht.DHT22(machine.Pin(13))
 
 def sub_cb(topic, msg, retained):
-    # c, r = [int(x) for x in msg.decode().split(' ')]
-    print('Topic = {} Valor = {}'.format(topic.decode(), msg.decode()))
+    print('Topic = {} -> Valor = {}'.format(topic.decode(), msg.decode()))
 
 async def wifi_han(state):
     print('Wifi is ', 'up' if state else 'down')

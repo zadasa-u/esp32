@@ -1,7 +1,7 @@
 # mqtt_local.py Local configuration for mqtt_as demo programs.
 from sys import platform, implementation
 from mqtt_as import config
-import settings.py
+from settings import SERVIDOR, SSID, PASS
 
 #  config['server'] = '192.168.0.10'  # Change to suit
 config['server'] = SERVIDOR
