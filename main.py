@@ -16,7 +16,8 @@
 from mqtt_as import MQTTClient
 from mqtt_local import config
 import uasyncio as asyncio
-import dht, machine
+import dht, machine, json
+from collections import OrderedDict
 
 d = dht.DHT22(machine.Pin(13))
 
@@ -29,8 +30,7 @@ async def wifi_han(state):
 
 # If you connect with clean_session True, must re-subscribe (MQTT spec 3.1.2.4)
 async def conn_han(client):
-    await client.subscribe('temperatura', 1)
-    await client.subscribe('humedad', 1)
+    await client.subscribe(config['client_id'], 1)
 
 async def main(client):
     await client.connect()
@@ -41,17 +41,20 @@ async def main(client):
             d.measure()
             try:
                 temperatura=d.temperature()
-                await client.publish('temperatura', '{}'.format(temperatura), qos = 1)
-            except OSError as e:
-                print("sin sensor temperatura")
-            try:
-                humedad=d.humidity()
-                await client.publish('humedad', '{}'.format(humedad), qos = 1)
+                try:
+                    humedad=d.humidity()
+                    datos=json.dumps(OrderedDict([
+                        ('temperatura',temperatura),
+                        ('humedad',humedad)
+                    ]))
+                    await client.publish(config['client_id'], datos, qos = 1)
+                except OSError as e:
+                    print("sin sensor temperatura")
             except OSError as e:
                 print("sin sensor humedad")
         except OSError as e:
             print("sin sensor")
-        await asyncio.sleep(20)  # Broker is slow
+        await asyncio.sleep(180)  # Broker is slow
 
 # Define configuration
 config['subs_cb'] = sub_cb
