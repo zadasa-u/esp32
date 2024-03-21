@@ -2,12 +2,12 @@
 from sys import platform, implementation
 from mqtt_as import config
 
-#  config['server'] = '192.168.0.10'  # Change to suit
-config['server'] = 'test.mosquitto.org'
+config['server'] = '192.168.0.10'  # Change to suit
+#  config['server'] = 'test.mosquitto.org'
 
 # Not needed if you're only using ESP8266
-config['ssid'] = 'ssid'
-config['wifi_pw'] = 'password'
+config['ssid'] = 'your_network_name'
+config['wifi_pw'] = 'your_password'
 
 # For demos ensure same calling convention for LED's on all platforms.
 # ESP8266 Feather Huzzah reference board has active low LED's on pins 0 and 2.
@@ -21,7 +21,7 @@ if platform == 'esp8266' or platform == 'esp32':
         def func(v):
             pin(not v)  # Active low on ESP8266
         return pin if active else func
-    wifi_led = ledfunc(Pin(14, Pin.OUT, value = 0))  # Red LED for WiFi fail/not ready yet
+    wifi_led = ledfunc(Pin(0, Pin.OUT, value = 0))  # Red LED for WiFi fail/not ready yet
     blue_led = ledfunc(Pin(2, Pin.OUT, value = 1))  # Message received
     # Example of active high LED on UM Feather S3
     # blue_led = ledfunc(Pin(13, Pin.OUT, value = 0), 1)  # Message received ESP32-S3
