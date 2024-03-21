@@ -40,14 +40,14 @@ async def main(client):
         # If WiFi is down the following will pause for the duration.
         await client.publish('result', '{} {}'.format(n, client.REPUB_COUNT), qos = 1)
         n += 1
-        await asyncio.sleep(20)  # Broker is slow
+        await asyncio.sleep(10)  # Broker is slow
 
 # Define configuration
 config['subs_cb'] = sub_cb
 config['server'] = SERVER
 config['connect_coro'] = conn_han
 config['wifi_coro'] = wifi_han
-config['ssl'] = False
+config['ssl'] = True
 
 # Set up client
 MQTTClient.DEBUG = True  # Optional
