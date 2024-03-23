@@ -16,12 +16,121 @@
 from mqtt_as import MQTTClient
 from mqtt_local import config
 import uasyncio as asyncio
-import dht, machine
+import ujson as json
+import dht, machine, ubinascii
 
-d = dht.DHT22(machine.Pin(13))
+# Constantes
+CLIENT_ID = ubinascii.hexlify(machine.unique_id()).decode('utf-8')
+print(f'CLIENT_ID: {CLIENT_ID}')
 
+TOPIC = 'test_x4lj3sf'
+#TOPIC = CLIENT_ID
+
+MODE_MAN = 'man'
+MODE_AUT = 'auto'
+
+PIN_DHT = 13
+PIN_RELE = 12
+PIN_LED = 27
+
+FT = 0.2 # tiempo de encendido/apagado del led (destello)
+FP = 2   # tiempo de sleep principal de funcion led_flash()
+FN = 20  # numero de destellos
+MP = 5.0 # periodo de monitoreo del sensor
+
+# Objetos globales:
+d = dht.DHT22(machine.Pin(PIN_DHT))
+
+rele = machine.Pin(PIN_RELE, machine.Pin.OUT)
+rele.value(1) # apagado (activo en bajo)
+
+led = machine.Pin(PIN_LED, machine.Pin.OUT)
+led.value(1) # apagado (activo en bajo)
+
+# Variables globales:
+params = {
+    'temperatura':0.0, # grados Celsius 
+    'humedad':0.0,     # %
+    'setpoint':25.0,   # grados Celsius
+    'periodo':20.0,    # segundos
+    'modo':MODE_MAN,   # manual o automatico
+    'rele':('off' if rele.value() else 'on') # rele activo en bajo
+}
+flash = False
+
+# Funciones generales
+def read_dht22():
+    try:
+        d.measure()
+        try:
+            #temperatura=d.temperature()
+            params['temperatura'] = d.temperature()
+            #await client.publish(f'{main_topic}/temperatura', '{}'.format(temperatura), qos = 1)
+        except OSError as e:
+            print("sin sensor temperatura")
+        try:
+            #humedad=d.humidity()
+            params['humedad'] = d.humidity()
+            #await client.publish(f'{main_topic}/humedad', '{}'.format(humedad), qos = 1)
+        except OSError as e:
+            print("sin sensor humedad")
+    except OSError as e:
+        print("sin sensor")
+
+def rele_on():
+    rele.value(0)
+
+def rele_off():
+    rele.value(1)
+
+def led_on():
+    led.value(0)
+
+def led_off():
+    led.value(1)   
+
+# Funciones para configuracion del cliente: sub_cb, wifi_han, conn_han
 def sub_cb(topic, msg, retained):
-    print('Topic = {} -> Valor = {}'.format(topic.decode(), msg.decode()))
+    
+    global flash
+
+    dtopic = topic.decode()
+    dmsg = msg.decode()
+    print('Topico = {} -> Valor = {}'.format(dtopic, dmsg))
+
+    if dtopic in ('setpoint','periodo'):
+        try:
+            params[dtopic] = float(dmsg)
+        except ValueError:
+            print(f'Error: No se puede asignar el valor "{dmsg}" a "{dtopic}"')
+
+    elif dtopic == 'modo':
+        if dmsg.lower() in (MODE_MAN, MODE_AUT):
+            params[dtopic] = dmsg.lower()
+        else:
+            print(f'Error: No se puede asignar "{dmsg}" como modo de operacion')
+
+    elif dtopic == 'rele':
+        if params['modo'] == MODE_MAN:
+            if dmsg.lower() == 'on':
+                rele_on()
+                print('Rele ON')
+            elif dmsg.lower() == 'off':
+                rele_off()
+                print('Rele OFF')
+            else:
+                print(f'Advertencia: Comando de rele invalido: "{dmsg}"')
+
+    elif dtopic == 'destello':
+        dmsg = dmsg.lower()
+        if dmsg in ('on','off'):
+            flash = (dmsg == 'on')
+            if flash:
+                print('Destello activado')
+            else:
+                print('Destello desactivado')
+        else:
+            print(f'El comando "{dmsg}" no es valido para destello')
 
 async def wifi_han(state):
     print('Wifi is ', 'up' if state else 'down')
@@ -29,31 +138,57 @@ async def wifi_han(state):
 
 # If you connect with clean_session True, must re-subscribe (MQTT spec 3.1.2.4)
 async def conn_han(client):
-    await client.subscribe('+/temperatura', 1)
-    await client.subscribe('+/humedad', 1)
+    await client.subscribe('setpoint', 1)
+    await client.subscribe('periodo', 1)
+    await client.subscribe('destello', 1)
+    await client.subscribe('modo', 1)
+    await client.subscribe('rele', 1)
+
+# Funciones principales: monit, led_flash, main, tasks
+async def monit():
+    while True:
+        read_dht22()
+
+        if params['modo'] == MODE_AUT:
+            if params['temperatura'] > params['setpoint']:
+                rele_on()
+                print('Rele ON')
+            else:
+                rele_off()
+                print('Rele OFF')
+        
+        #print('**read_dht22()**')
+        #print(' Temperatura: {}'.format(params['temperatura']))
+        #print(' Humedad: {}'.format(params['humedad']))
+
+        await asyncio.sleep(MP)
+
+async def led_flash():
+    global flash
+    while True:
+        if flash is True:
+            for n in range(FN):
+                led_on()
+                await asyncio.sleep(FT)
+                led_off()
+                await asyncio.sleep(FT)
+            flash = False
+
+        await asyncio.sleep(FP)
 
 async def main(client):
     await client.connect()
-    n = 0
     await asyncio.sleep(2)  # Give broker time
+    
     while True:
-        try:
-            d.measure()
-            try:
-                temperatura=d.temperature()
-                await client.publish('sandro/temperatura', '{}'.format(temperatura), qos = 1)
-            except OSError as e:
-                print("sin sensor temperatura")
-            try:
-                humedad=d.humidity()
-                await client.publish('sandro/humedad', '{}'.format(humedad), qos = 1)
-            except OSError as e:
-                print("sin sensor humedad")
-        except OSError as e:
-            print("sin sensor")
-        await asyncio.sleep(20)  # Broker is slow
+        await client.publish(f'{TOPIC}', json.dumps(params), qos=1)
 
-# Define configuration
+        await asyncio.sleep(params['periodo'])  # Broker is slow
+
+async def tasks(client):
+    await asyncio.gather(main(client), monit(), led_flash())
+
+# Define client configuration
 config['subs_cb'] = sub_cb
 config['connect_coro'] = conn_han
 config['wifi_coro'] = wifi_han
@@ -62,8 +197,9 @@ config['ssl'] = True
 # Set up client
 MQTTClient.DEBUG = True  # Optional
 client = MQTTClient(config)
+
 try:
-    asyncio.run(main(client))
+    asyncio.run(tasks(client))
 finally:
     client.close()
     asyncio.new_event_loop()
