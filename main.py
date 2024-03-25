@@ -10,14 +10,12 @@
 
 # Public brokers https://github.com/mqtt/mqtt.github.io/wiki/public_brokers
 
-# red LED: ON == WiFi fail
-# green LED heartbeat: demonstrates scheduler is running.
-
 from mqtt_as import MQTTClient
 from mqtt_local import config
 import uasyncio as asyncio
 import ujson as json
-import dht, machine, ubinascii
+import uos as os
+import dht, machine, ubinascii, btree
 
 # Constantes
 CLIENT_ID = ubinascii.hexlify(machine.unique_id()).decode('utf-8')
@@ -58,6 +56,37 @@ params = {
 }
 flash = False
 
+# Funciones para base de datos
+def storedb(spt, per, mod):
+    with open('db','wb') as f:
+        db = btree.open(f)
+
+        try:
+            db[b'setpoint'] = str(spt).encode()
+            db[b'periodo'] = str(per).encode()
+            db[b'modo'] = mod.encode()
+        except:
+            print('Error en los tipos de datos')
+
+        db.flush()
+        db.close()
+
+def readdb():
+    with open('db','rb') as f:
+        db = btree.open(f)
+
+        try:
+            spt = float(db[b'setpoint'].decode())
+            per = float(db[b'periodo'].decode())
+            mod = db[b'modo'].decode()
+        except:
+            print('Clave/s no encontrada/s')
+
+        db.flush()
+        db.close()
+
+    return spt, per, mod
+
 # Funciones generales
 def read_dht22():
     try:
@@ -93,6 +122,7 @@ def led_off():
 def sub_cb(topic, msg, retained):
     
     global flash
+    mod = False
 
     dtopic = topic.decode()
     dmsg = msg.decode()
@@ -101,12 +131,14 @@ def sub_cb(topic, msg, retained):
     if dtopic in ('setpoint','periodo'):
         try:
             params[dtopic] = float(dmsg)
+            mod = True
         except ValueError:
             print(f'Error: No se puede asignar el valor "{dmsg}" a "{dtopic}"')
 
     elif dtopic == 'modo':
         if dmsg.lower() in (MODE_MAN, MODE_AUT):
             params[dtopic] = dmsg.lower()
+            mod = True
         else:
             print(f'Error: No se puede asignar "{dmsg}" como modo de operacion')
 
@@ -131,6 +163,9 @@ def sub_cb(topic, msg, retained):
                 print('Destello desactivado')
         else:
             print(f'El comando "{dmsg}" no es valido para destello')
+    
+    if mod is True:
+        storedb(params['setpoint'],params['periodo'],params['modo'])
 
 async def wifi_han(state):
     print('Wifi is ', 'up' if state else 'down')
@@ -187,6 +222,14 @@ async def main(client):
 
 async def tasks(client):
     await asyncio.gather(main(client), monit(), led_flash())
+
+# Access Data Base
+if 'db' not in os.listdir():
+    print('Base de datos NO encontrada. CREANDO NUEVA')
+    storedb(params['setpoint'], params['periodo'], params['modo'])
+else:
+    print('Base de datos encontrada. LEYENDO DATOS')
+    params['setpoint'], params['periodo'], params['modo'] = readdb()
 
 # Define client configuration
 config['subs_cb'] = sub_cb
