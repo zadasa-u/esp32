@@ -219,6 +219,7 @@ async def main(client):
     await asyncio.sleep(2)  # Give broker time
     
     while True:
+        print('Publicando', params)
         await client.publish(f'{TOPIC}', json.dumps(params), qos=1)
 
         await asyncio.sleep(params['periodo'])  # Broker is slow
@@ -232,7 +233,11 @@ if 'db' not in os.listdir():
     storedb(params['setpoint'], params['periodo'], params['modo'])
 else:
     print('Base de datos encontrada. LEYENDO DATOS')
-    params['setpoint'], params['periodo'], params['modo'] = readdb()
+    try:
+        params['setpoint'], params['periodo'], params['modo'] = readdb()
+    except:
+        print('No se encontraron datos. GENERANDO')
+        storedb(params['setpoint'], params['periodo'], params['modo'])
 
 # Define client configuration
 config['subs_cb'] = sub_cb
