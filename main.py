@@ -188,9 +188,11 @@ async def monit():
         if params['modo'] == MODE_AUT:
             if params['temperatura'] > params['setpoint']:
                 rele_on()
+                params['rele'] = 'on'
                 print('Rele ON')
             else:
                 rele_off()
+                params['rele'] = 'off'
                 print('Rele OFF')
         
         #print('**read_dht22()**')
