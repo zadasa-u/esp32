@@ -21,8 +21,8 @@ import dht, machine, ubinascii, btree
 CLIENT_ID = ubinascii.hexlify(machine.unique_id()).decode('utf-8')
 print(f'CLIENT_ID: {CLIENT_ID}')
 
-TOPIC = 'test_x4lj3sf'
-#TOPIC = CLIENT_ID
+#TOPIC = 'test_x4lj3sf'
+TOPIC = CLIENT_ID
 
 MODE_MAN = 'man'
 MODE_AUT = 'auto'
