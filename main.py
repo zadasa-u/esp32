@@ -12,6 +12,7 @@
 
 from mqtt_as import MQTTClient
 from mqtt_local import config
+from settings import NOMBRE
 import uasyncio as asyncio
 import ujson as json
 import uos as os
@@ -22,7 +23,7 @@ CLIENT_ID = ubinascii.hexlify(machine.unique_id()).decode('utf-8')
 print(f'CLIENT_ID: {CLIENT_ID}')
 
 #TOPIC = 'test_x4lj3sf'
-TOPIC = CLIENT_ID
+TOPIC = f"{NOMBRE}/" + CLIENT_ID
 
 MODE_MAN = 'man'
 MODE_AUT = 'auto'
