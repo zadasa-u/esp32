@@ -1,16 +1,17 @@
 # mqtt_local.py Local configuration for mqtt_as demo programs.
 from sys import platform, implementation
 from mqtt_as import config
-from settings import SERVIDOR, SSID, PASS, USR_MQTT, PASS_MQTT
+from settings import BROKER, SSID, PASS
+# , USR_MQTT, PASS_MQTT
 
 #  config['server'] = '192.168.0.10'  # Change to suit
-config['server'] = SERVIDOR
+config['server'] = BROKER
 
 # Not needed if you're only using ESP8266
 config['ssid'] = SSID
 config['wifi_pw'] = PASS
-config['user'] = USR_MQTT
-config['password'] = PASS_MQTT
+# config['user'] = USR_MQTT
+# config['password'] = PASS_MQTT
 
 # For demos ensure same calling convention for LED's on all platforms.
 # ESP8266 Feather Huzzah reference board has active low LED's on pins 0 and 2.
