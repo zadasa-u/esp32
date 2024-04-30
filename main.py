@@ -47,7 +47,7 @@ async def main(client):
                         ('temperatura',temperatura),
                         ('humedad',humedad)
                     ]))
-                    await client.publish(config['client_id'], datos, qos = 1)
+                    await client.publish(iot/2024/config['client_id'], datos, qos = 1)
                 except OSError as e:
                     print("sin sensor temperatura")
             except OSError as e:
