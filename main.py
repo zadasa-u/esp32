@@ -20,10 +20,8 @@ import dht, machine, ubinascii, btree
 
 # Constantes
 CLIENT_ID = ubinascii.hexlify(machine.unique_id()).decode('utf-8')
-print(f'CLIENT_ID: {CLIENT_ID}')
 
-#TOPIC = 'test_x4lj3sf'
-TOPIC = f"{NOMBRE}/" + CLIENT_ID
+TOPIC = "iot/2024/" + CLIENT_ID
 
 MODE_MAN = 'man'
 MODE_AUT = 'auto'
@@ -93,15 +91,11 @@ def read_dht22():
     try:
         d.measure()
         try:
-            #temperatura=d.temperature()
             params['temperatura'] = d.temperature()
-            #await client.publish(f'{main_topic}/temperatura', '{}'.format(temperatura), qos = 1)
         except OSError as e:
             print("sin sensor temperatura")
         try:
-            #humedad=d.humidity()
             params['humedad'] = d.humidity()
-            #await client.publish(f'{main_topic}/humedad', '{}'.format(humedad), qos = 1)
         except OSError as e:
             print("sin sensor humedad")
     except OSError as e:
@@ -194,10 +188,6 @@ async def monit():
                 rele_off()
                 params['rele'] = 'off'
                 print('Rele OFF')
-        
-        #print('**read_dht22()**')
-        #print(' Temperatura: {}'.format(params['temperatura']))
-        #print(' Humedad: {}'.format(params['humedad']))
 
         await asyncio.sleep(MP)
 
