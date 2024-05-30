@@ -12,7 +12,6 @@
 
 from mqtt_as import MQTTClient
 from mqtt_local import config
-from settings import NOMBRE
 import uasyncio as asyncio
 import ujson as json
 import uos as os
