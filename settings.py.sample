@@ -1,0 +1,7 @@
+SSID="cambiar"
+PASS="cambiar"
+BROKER="cambiar.cambiar.cambiar"
+MQTT_PORT="cambiar"
+MQTT_USER="cambiar"
+MQTT_PASS="cambiar"
+BASE_TOPIC='cambiar/cambiar/'
